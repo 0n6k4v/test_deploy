@@ -2,7 +2,6 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
-// https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
     react(),
@@ -10,8 +9,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
       manifest: {
-        name: 'Vite PWA Project',
-        short_name: 'Vite PWA',
+        name: 'Raven',
+        short_name: 'Raven',
         theme_color: '#660000',
         background_color: '#ffffff',
         display: 'standalone',
@@ -53,7 +52,28 @@ export default defineConfig({
             form_factor: 'wide'
           }
         ]
-      }
+      },
     })
-  ]
+  ],
+  server: {
+    host: true,
+    strictPort: true,
+    port: 5173,
+    allowedHosts: [""]
+  },
+  build: {
+    outDir: 'dist',
+    assetsDir: 'assets',
+    sourcemap: false,
+    minify: 'terser',
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom', 'react-router-dom'],
+          leaflet: ['leaflet', 'react-leaflet'],
+          charts: ['recharts', 'react-chartjs-2']
+        }
+      }
+    }
+  }
 })

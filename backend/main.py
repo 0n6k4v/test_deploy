@@ -1,120 +1,49 @@
-import os
-import io
-import base64
-import tempfile
-from typing import Optional
-from fastapi import FastAPI, File, UploadFile, Form
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from PIL import Image
-import numpy as np
-from ultralytics import YOLO
-import cv2
-
-# Import the pill recognition system
-from pill_recognition import ImprovedPillRecognitionSystem
+from api.endpoints.inference import router as inference_router
+from api.endpoints.provinces import router as province_router
+from api.endpoints.districts import router as district_router
+from api.endpoints.subdistricts import router as subdistrict_router
+from api.endpoints.exhibits import router as exhibits_router
+from api.endpoints.history import router as history_router
+from api.endpoints.users import router as user_router
+from api.endpoints.roles import router as role_router
+from api.endpoints.auth import router as auth_router
+from api.endpoints.permissions import router as permissions_router
+from api.endpoints.notifications import router as notifications_router
+import os
 
 app = FastAPI()
 
 # Configure CORS
+allowed_origins = os.getenv("ALLOWED_ORIGINS", "").split(",")
+if not allowed_origins or allowed_origins[0] == "":
+    allowed_origins = ["*"]  # Fallback to allow all in development
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, specify actual origins
+    allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 
-# Initialize model
-pill_model = ImprovedPillRecognitionSystem(
-    model_path='model/pill_model.h5',
-    prototype_path='model/pill_prototypes.json'
-)
+# Include all routers
+app.include_router(inference_router, prefix="/api")
+app.include_router(province_router, prefix="/api")
+app.include_router(district_router, prefix="/api")
+app.include_router(subdistrict_router, prefix="/api")
+app.include_router(exhibits_router, prefix="/api")
+app.include_router(history_router, prefix="/api")
+app.include_router(user_router, prefix="/api")
+app.include_router(role_router, prefix="/api")
+app.include_router(auth_router, prefix="/api")
+app.include_router(permissions_router, prefix="/api")
+app.include_router(notifications_router, prefix="/api")
 
-weapon_model = YOLO('./model/best.pt')
-
-def detect_weapon(image_path):
-    """Process image with YOLO model and return detection results"""
-    # Run detection
-    results = weapon_model(image_path)
-    
-    # Process results
-    detections = []
-    highest_conf = 0
-    highest_class = None
-    
-    for result in results:
-        boxes = result.boxes
-        
-        for box in boxes:
-            # Get coordinates
-            x1, y1, x2, y2 = box.xyxy[0].tolist()
-            
-            # Get class and confidence
-            cls = int(box.cls[0])
-            conf = float(box.conf[0])
-            
-            # Get class name
-            class_name = result.names[cls] if hasattr(result, 'names') else f"Class {cls}"
-            
-            # Track highest confidence detection
-            if conf > highest_conf:
-                highest_conf = conf
-                highest_class = class_name
-            
-            # Add to detections list
-            detections.append({
-                "class": class_name,
-                "confidence": conf,
-                "box": [int(x1), int(y1), int(x2), int(y2)]
-            })
-    
-    # Save annotated image for reference
-    annotated_image = results[0].plot()
-    annotated_image_path = f"{image_path}_annotated.jpg"
-    cv2.imwrite(annotated_image_path, annotated_image)
-    
-    # Return formatted results
-    return {
-        "detected": len(detections) > 0,
-        "confidence": highest_conf,
-        "weaponType": highest_class,
-        "detections": detections,
-        "annotatedImagePath": annotated_image_path
-    }
-
-@app.post("/api/analyze")
-async def analyze_image(
-    image: UploadFile = File(...),
-    mode: str = Form(...)
-):
-    # Add logging to help debugging
-    print(f"Received request with mode: {mode}")
-    
-    # Save the uploaded file temporarily
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as temp:
-        temp_path = temp.name
-        contents = await image.read()
-        temp.write(contents)
-    
-    try:
-        if mode == "ยาเสพติด":
-            # Use the pill recognition system
-            result = pill_model.predict(temp_path)
-            return result
-        elif mode == "อาวุปืน":
-            # Use the YOLO weapon detection model
-            result = detect_weapon(temp_path)
-            return result
-        else:
-            return {"error": "Invalid mode specified"}
-    except Exception as e:
-        # Add better error handling
-        print(f"Error processing image: {str(e)}")
-        return {"error": str(e)}
-    finally:
-        # Clean up the temporary file
-        if os.path.exists(temp_path):
-            os.remove(temp_path)
+@app.get("/api/health")
+async def health_check():
+    return {"status": "healthy"}
 
 if __name__ == "__main__":
     import uvicorn

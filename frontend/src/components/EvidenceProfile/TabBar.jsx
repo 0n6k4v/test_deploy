@@ -9,13 +9,17 @@ const TabBar = () => {
   
   const tabs = [
     { id: 0, name: 'ข้อมูลเบื้องต้น', path: '/evidenceProfile' },
+    { id: 1, name: 'คลังภาพ', path: '/evidenceProfile/gallery' },
+    { id: 2, name: 'ประวัติ', path: '/evidenceProfile/history' },
   ];
   
-  // Find active tab based on current path
   const findActiveTabIndex = () => {
     const currentPath = location.pathname;
-    const index = tabs.findIndex(tab => currentPath.includes(tab.path));
-    return index >= 0 ? index : 0;
+    // ใช้การตรวจสอบที่เฉพาะเจาะจงมากขึ้น
+    if (currentPath === '/evidenceProfile') return 0;
+    else if (currentPath === '/evidenceProfile/gallery') return 1;
+    else if (currentPath === '/evidenceProfile/history') return 2;
+    return 0;
   };
   
   const activeTab = findActiveTabIndex();
@@ -29,7 +33,7 @@ const TabBar = () => {
         width: tabRect.width 
       });
     }
-  }, [activeTab]);
+  }, [activeTab, location.pathname]);
 
   const handleTabClick = (path) => {
     navigate(path);
