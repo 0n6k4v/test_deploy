@@ -21,3 +21,10 @@ torch
 torchvision
 Pillow
 ultralytics
+tensorflow
+keras
+tempfile
+traceback
+scikit-learn
+pathlib
+matplotlib
